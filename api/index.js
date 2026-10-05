@@ -1,27 +1,45 @@
 export default async function handler(req, res) {
-  // Можно будет передавать канал в URL: ?channel=nn52signal
+  // Можно передавать канал в URL: ?channel=nn52signal
   const channel = req.query.channel || 'nn52signal';
-  const targetUrl = `https://t.me/s/${channel}`;
+  
+  // Используем публичный RSSHub для получения RSS/XML ленты канала
+  const targetUrl = `https://rsshub.app/telegram/channel/${channel}`;
+
+  console.log(`[Request] Fetching RSS feed for channel: "${channel}" from ${targetUrl}`);
 
   try {
     const response = await fetch(targetUrl, {
       headers: {
-        // Обязательно притворяемся обычным браузером
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'application/xml, text/xml, */*'
       }
     });
 
+    console.log(`[Response Status] ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Telegram ответил статусом ${response.status}`);
+      const errorBody = await response.text();
+      console.error(`[RSSHub Error] Status: ${response.status}`, errorBody.slice(0, 300));
+      
+      return res.status(response.status).json({
+        error: `RSSHub ответил статусом ${response.status}`,
+        details: errorBody.slice(0, 200)
+      });
     }
 
-    const html = await response.text();
+    const xmlData = await response.text();
+    console.log(`[Success] Successfully fetched ${xmlData.length} bytes from RSSHub`);
 
-    // Разрешаем CORS (чтобы хостинг не ругался) и отдаем HTML
+    // Разрешаем CORS и отдаем RSS/XML
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.status(200).send(html);
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+    res.status(200).send(xmlData);
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[Fetch Exception]', error);
+    res.status(500).json({
+      error: 'Ошибка при запросе к RSSHub',
+      message: error.message
+    });
   }
 }
