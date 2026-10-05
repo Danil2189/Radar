@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   channel = channel.replace(/^@/, '');
 
   // Основной источник (RSSForever) и запасной (TGStat)
-  const primaryUrl = `https://rsshub.rssforever.com/telegram/channel/${channel}`;
+  const primaryUrl = `https://rsshub.rssforever.comолпа/telegram/channel/${channel}`;
   const fallbackUrl = `https://tgstat.ru/channel/@${channel}`;
 
   const headers = {
